@@ -82,13 +82,6 @@ public static class NotLib {
                     break;
             }
         }
-        //local lev,req,name = {},{},unit.charName
-		//for i=_Q,_R,(_W-_Q) do req[i],lev[i] = 0,unit:GetSpellData(i).level end
-		//if name == "Elise" or name == "Karma" or name == "Jayce" or name == "Nidalee" or name == "Gnar" then lev[_R] = lev[_R]-1 end
-		//for i=1,#list do
-		//	req[list[i] ] = req[list[i] ]+1
-		//	if req[list[i] ] > lev[list[i] ] then LevelSpell(list[i]) return end
-		//end
     }
     // timer
     public static void SmartTick(System.Action cb) {
