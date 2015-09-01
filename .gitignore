@@ -1,6 +1,5 @@
 bin/
 obj/
-properties/
 NotJungle.sln
 NotJungle.csproj
 App.config
