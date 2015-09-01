@@ -5,7 +5,7 @@ public class NotJungle {
     public System.Func<LeagueSharp.NeutralMinionCamp> CreepSpawn, CreepSpawnEx;
     public System.Func<LeagueSharp.NeutralMinionCamp, bool, LeagueSharp.Obj_AI_Minion> Creep, CreepEx;
     public System.Action<LeagueSharp.Obj_AI_Minion, LeagueSharp.NeutralMinionCamp> Clear;
-    public System.Func<LeagueSharp.NeutralMinionCamp, bool> Cleave, Channel, Slack;
+    public System.Func<LeagueSharp.NeutralMinionCamp, bool> Channel,Cleave,Slack;
     public System.Func<bool> NeedPot;
     public void Reset() {
         CreepSpawn = delegate {
@@ -36,7 +36,8 @@ public class NotJungle {
         };
         CreepEx = delegate { return null; };
         Clear = delegate(LeagueSharp.Obj_AI_Minion creep, LeagueSharp.NeutralMinionCamp camp) { NotLib.myHero.Attack(creep); };
-        Cleave = Channel = Slack = delegate { return false; };
+        Channel = delegate { return NotLib.myHero.Spellbook.IsCastingSpell || NotLib.myHero.Spellbook.IsChanneling; };
+        Cleave = Slack = delegate { return false; };
         NeedPot = delegate { return NotLib.myHero.Health/NotLib.myHero.MaxHealth < 0.4; };
     }
     public void Logic() {
@@ -48,15 +49,49 @@ public class NotJungle {
             System.Console.WriteLine(LeagueSharp.Game.ClockTime + " - " + creepSpawn.Data().type + " - " + creepSpawn.Data().Get());
             var creep = CreepEx(creepSpawn, false) ?? Creep(creepSpawn, false);
             if (creep != null) {
-                Clear(creep, creepSpawn);
-            } else if (NotLib.myHero.ServerPosition.Distance(creepSpawn.Position) > 50) NotLib.myHero.MoveTo(creepSpawn.Position);
+                if (Channel(creepSpawn)) return;
+                else Clear(creep, creepSpawn);
+            } else if (Channel(creepSpawn)) return;
+            else if (Slack(creepSpawn)) return;
+            else if (NotLib.myHero.ServerPosition.Distance(creepSpawn.Position) > 50) NotLib.myHero.MoveTo(creepSpawn.Position);
         }
     }
+    public void Warwick() {
+        Clear = delegate(LeagueSharp.Obj_AI_Minion creep, LeagueSharp.NeutralMinionCamp creepSpawn) {
+            if (NotLib.myHero.InRange(creep)) {
+                NotLib.myHero.Cast(LeagueSharp.SpellSlot.Q, creep);
+                if (NotLib.myHero.Level < 3 || creepSpawn.Data().Health() > NotLib.myHero.SmiteDamage()) NotLib.myHero.Cast(LeagueSharp.SpellSlot.W);
+            }
+            NotLib.myHero.Attack(creep);
+        };
+    }
+    public void MasterYi() {
+        Clear = delegate(LeagueSharp.Obj_AI_Minion creep, LeagueSharp.NeutralMinionCamp creepSpawn) {
+            if (!creepSpawn.Data().Started() && Slack(creepSpawn)) return;
+            else if (NotLib.myHero.InRange(creep) && (NotLib.myHero.Level < 3 || creepSpawn.Data().Health() > NotLib.myHero.SmiteDamage())) {
+                NotLib.myHero.Cast(LeagueSharp.SpellSlot.Q, creep);
+                NotLib.myHero.Cast(LeagueSharp.SpellSlot.E);
+            }
+            NotLib.myHero.Attack(creep);
+        };
+        Slack = delegate {
+            return NotLib.myHero.Health/NotLib.myHero.MaxHealth < 0.5 && NotLib.myHero.PercentLifeStealMod*NotLib.myHero.TotalAttackDamage+10 < 20 && NotLib.myHero.Cast(LeagueSharp.SpellSlot.W);
+        };
+    }
     public NotJungle() {
-        Reset();
         LeagueSharp.Game.OnUpdate += delegate(System.EventArgs a) {
             foreach (var creepSpawn in LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>()) { if (creepSpawn.IsValid) creepSpawn.Data().Refresh(); }
         };
+        Reset();
+        switch (NotLib.myHero.ChampionName) {
+            case "MasterYi":
+                MasterYi();
+                break;
+            case "Warwick":
+                Warwick();
+                break;
+        }
+        
     }
 }
 
@@ -68,8 +103,6 @@ public class INotJungle:NotJungle {
             if (a.Msg == 256 && a.WParam == switchButton) @switch = !@switch;
             if (a.Msg == 516 && a.WParam == 2) @switch = false;
         };
-        NotLib.SmartTick(delegate {
-            if (@switch) Logic();
-        });
+        NotLib.SmartTick(delegate {if (@switch) Logic();});
     }  
 }

@@ -51,12 +51,19 @@ public static class NotLib {
         return LeagueSharp.SpellSlot.Unknown;
     }
     public static LeagueSharp.SpellSlot Item_HealthPot(this LeagueSharp.Obj_AI_Base unit) { return unit.Item(new System.Collections.Generic.List<int> { 2041, 2003, 2010, 2009 }); }
+    public static int SmiteDamage(this LeagueSharp.Obj_AI_Hero unit) {
+        var damage = 370 + unit.Level*20;
+		if (unit.Level > 4) damage = damage+(unit.Level-4)*10;
+		if (unit.Level > 9) damage = damage+(unit.Level-9)*10;
+		if (unit.Level > 14) damage = damage+(unit.Level-14)*10;
+        return damage;
+    }
     // order related
     public static bool InRange(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.AttackableUnit target) { return unit.ServerPosition.Distance(target.Position) < unit.AttackRange + unit.BoundingRadius + target.BoundingRadius; }
     public static void Attack(this LeagueSharp.Obj_AI_Base unit,LeagueSharp.AttackableUnit target) { unit.IssueOrder(LeagueSharp.GameObjectOrder.AttackUnit,target); }
     public static void MoveTo(this LeagueSharp.Obj_AI_Base unit, SharpDX.Vector3 pos,bool randomize = true) { unit.IssueOrder(LeagueSharp.GameObjectOrder.MoveTo, pos); }
-    public static void Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell) { if (spell != LeagueSharp.SpellSlot.Unknown && unit.Spellbook.GetSpell(spell).State == LeagueSharp.SpellState.Ready) unit.Spellbook.CastSpell(spell); }
-    public static void Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell, LeagueSharp.GameObject target) { if (spell != LeagueSharp.SpellSlot.Unknown && unit.Spellbook.GetSpell(spell).State == LeagueSharp.SpellState.Ready) unit.Spellbook.CastSpell(spell, target); }
+    public static bool Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell) { return (spell != LeagueSharp.SpellSlot.Unknown && spell.CanUse(unit) && unit.Spellbook.CastSpell(spell)); }
+    public static bool Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell, LeagueSharp.GameObject target) { return (spell != LeagueSharp.SpellSlot.Unknown && spell.CanUse(unit) && unit.Spellbook.CastSpell(spell, target)); }
     public static void Level(this LeagueSharp.Obj_AI_Base unit, System.Collections.Generic.List<LeagueSharp.SpellSlot> list) {
         int req_Q = 0, _Q = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.Q).Level;
         int req_W = 0, _W = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.W).Level;
@@ -215,6 +222,7 @@ public static class NotLib {
             return 100;
         }
         public System.Collections.Generic.IEnumerable<LeagueSharp.Obj_AI_Minion> Creeps(bool dead = false) { return LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_AI_Minion>().Where(creep => creep.IsValid && creep.IsVisible && creep.IsDead == dead && creep.CampNumber == campNumber); }
+        public float Health() { return Creeps().Sum(creep => creep.Health); }
         public LeagueSharp.Obj_AI_Minion BigCreep() {
             LeagueSharp.Obj_AI_Minion max = null;
             foreach (var creep in Creeps()) { if (max == null || creep.MaxHealth > max.MaxHealth) max = creep; }
