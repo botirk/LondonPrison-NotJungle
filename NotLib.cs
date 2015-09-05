@@ -301,6 +301,7 @@ namespace NotLib.Abstract {
             switch (gs.SData.TargettingType) {
                 case LeagueSharp.SpellDataTargetType.Unit:
                     return delegate(LeagueSharp.AttackableUnit target) { return s.myHero.Cast(spell, target); };
+                case LeagueSharp.SpellDataTargetType.Self:
                 case LeagueSharp.SpellDataTargetType.SelfAoe:
                     return delegate(LeagueSharp.AttackableUnit target) { return s.myHero.Cast(spell); };
             }
