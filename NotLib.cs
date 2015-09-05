@@ -447,7 +447,7 @@ namespace NotLib.Abstract {
                     LeagueSharp.NeutralMinionCamp result = CreepSpawnEx();
                     if (result != null) return result;
                     var resultScore = 10000000.0;
-                    foreach (var creepSpawn in LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>().Where(creepSpawn => creepSpawn.Position.Side() == s.myHero.Team)) {
+                    foreach (var creepSpawn in LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>().Where(creepSpawn => creepSpawn.IsValid && creepSpawn.Position.Side() == s.myHero.Team)) {
                         var score = 0.0;
                         var get = creepSpawn.Data<CreepSpawn>().Get() * s.myHero.MoveSpeed;
                         var dist = s.myHero.ServerPosition.Distance(creepSpawn.Position);
@@ -553,7 +553,7 @@ namespace NotLib.Abstract {
                 switch (charName) {
                     case "Warwick":
                         kill.spell.Q_Worth = delegate{return true;};
-                        kill.spell.W_Worth = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {return creepSpawn.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
+                        kill.spell.W_Worth = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {return s.myHero.InRange(creep) && creepSpawn.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
                         break;
                     case "MasterYi":
                         kill.spell.Q_Worth = delegate { return true; };
