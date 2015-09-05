@@ -1,5 +1,8 @@
-﻿class _Main{
+﻿using System.Linq;
+
+class _Main{
     static void Main(string[] args){
-        var bot = new INotJungle();
+        var kek = new NotLib.Abstract.Jungle.Switch();
+        
     }
 }
