@@ -1,0 +1,14 @@
+Jungler API will be available sooooon, right now its subject to change & evolving
+Here is example from NotLib.cs
+
+kill.spell.Q_Worth = delegate{return true;};
+kill.spell.W_Worth = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {return creepSpawn.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
+
+these 4 lines will set up Jungler Slack for Warwick
+
+kill.spell.Q_Worth = delegate { return true; };
+move.channel.Worth = kill.channel.Worth = delegate { return s.myHero.Health / s.myHero.MaxHealth < 1; };
+move.LogicEx = delegate { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
+
+these 3 lines will set up Jungler Slack for Master Yi
+

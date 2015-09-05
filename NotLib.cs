@@ -498,8 +498,7 @@ namespace NotLib.Abstract {
                         break;
                     case "MasterYi":
                         kill.spell.Q_Worth = delegate { return true; };
-                        kill.channel.Worth = delegate { return s.myHero.Health / s.myHero.MaxHealth < 1; };
-                        move.channel.Worth = delegate { return s.myHero.Health / s.myHero.MaxHealth < 1; };
+                        move.channel.Worth = kill.channel.Worth = delegate { return s.myHero.Health / s.myHero.MaxHealth < 1; };
                         move.LogicEx = delegate { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
                         break;
                 }
