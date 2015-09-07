@@ -1,0 +1,9 @@
+Features:
+
+Automatic Farm jungle with AA
+Automatic Pots at 45% health
+Yi+WW also use skills
+
+LeagueSharp.Common GUI
+F1 > enable/disable
+Right Click > disable

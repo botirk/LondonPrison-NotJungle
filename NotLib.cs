@@ -90,16 +90,6 @@ namespace NotLib.Ext {
                 }
             }
         }
-        // timer
-        public static void SmartTick(System.Action cb) {
-            float lastcall = 0;
-            LeagueSharp.Game.OnUpdate += delegate {
-                if (lastcall + 0.1 <= LeagueSharp.Game.ClockTime) {
-                    lastcall = LeagueSharp.Game.ClockTime;
-                    cb();
-                }
-            };
-        }
     }
     // unit
     public class Unit {
@@ -262,6 +252,36 @@ namespace NotLib.Ext {
                 else if (typeof(T) == typeof(CreepSpawn)) data[unit.Index] = new CreepSpawn(unit as LeagueSharp.NeutralMinionCamp);
             }
             return (T)data[unit.Index];
+        }
+    }
+    // timer
+    public static class Timer {
+        public class Handle {
+            public bool later = true;
+            public float lastcall, cooldown = 0;
+            public Handle Cooldown(float v) { cooldown = v; return this; }
+            public Handle Start() { later = false; return this; }
+            public System.Action<Handle> callback = delegate { };
+        }
+        public static System.Collections.Generic.Dictionary<string, Handle> list = new System.Collections.Generic.Dictionary<string, Handle>();
+        public static Handle Get(string name) {
+            if (!list.ContainsKey(name)) list.Add(name,new Handle());
+            return list[name];
+        }
+        public static Handle Add(System.Action<Handle> callback) {
+            for(ulong i = 0;;i++){
+                if (!list.ContainsKey(i.ToString())) return Get(i.ToString()); 
+            }
+        }
+        static Timer() {
+            LeagueSharp.Game.OnUpdate += delegate {
+                foreach (var h in list.Values) {
+                    if (!h.later && h.lastcall + h.cooldown <= LeagueSharp.Game.ClockTime) {
+                        h.lastcall = LeagueSharp.Game.ClockTime;
+                        h.callback(h);
+                    }
+                }
+            };
         }
     }
 }
@@ -552,14 +572,14 @@ namespace NotLib.Abstract {
                 Reset();
                 switch (charName) {
                     case "Warwick":
-                        kill.spell.Q_Worth = delegate{return true;};
-                        kill.spell.W_Worth = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {return s.myHero.InRange(creep) && creepSpawn.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
+                        kill.spell.Q_Worth = (c, cs) => { return true; };
+                        kill.spell.W_Worth = (c,cs) => {return s.myHero.InRange(c) && cs.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
                         break;
                     case "MasterYi":
-                        kill.spell.Q_Worth = delegate { return true; };
+                        kill.spell.Q_Worth = (c, cs) => { return true; };
                         kill.spell.E_Worth = new CycleEx("Warwick").kill.spell.W_Worth;
-                        move.channel.Worth = kill.channel.Worth = delegate { return s.myHero.Health / s.myHero.MaxHealth < 1; };
-                        move.LogicEx = delegate { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
+                        move.channel.Worth = kill.channel.Worth = () => { return s.myHero.Health / s.myHero.MaxHealth < 1; };
+                        move.LogicEx = (cs) => { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
                         break;
                 }
             }
@@ -567,14 +587,33 @@ namespace NotLib.Abstract {
         }
         // switcher
         public class Switch: CycleEx {
-            public bool @switch = false;
-            public int switchButton = 112; //F1
+            public int switchButton = 112; 
             public Switch():base(s.myHero.ChampionName) {
-                LeagueSharp.Game.OnWndProc += delegate(LeagueSharp.WndEventArgs a) {
-                    if (a.Msg == 256 && a.WParam == switchButton) @switch = !@switch;
-                    if (a.Msg == 516 && a.WParam == 2) @switch = false;
+                Timer.Get("jungler slack").Cooldown(0.1f).callback = delegate { Logic(); };
+                GuiFull();
+            }
+            public void GuiFull() {
+                var f1 = new LeagueSharp.Common.KeyBind(112, LeagueSharp.Common.KeyBindType.Toggle, false);
+                var farm = new LeagueSharp.Common.MenuItem("farm", "farm");
+                farm.SetValue(f1);
+                farm.ValueChanged += (h, a) => Timer.Get("jungler slack").later = !a.GetNewValue<LeagueSharp.Common.KeyBind>().Active;
+                farm.DontSave();
+                var menu = new LeagueSharp.Common.Menu("jungler slack", "jungler slack", true);
+                menu.AddItem(farm);
+                menu.AddToMainMenu();
+                // right click disabler
+                LeagueSharp.Game.OnWndProc += (a) => {
+                    if (a.Msg == 516 && a.WParam == 2) {
+                        f1.Active = false;
+                        farm.SetValue(f1);
+                    }
                 };
-                s.SmartTick(delegate { if (@switch) Logic(); });
+            }
+            public void GuiLess() {
+                LeagueSharp.Game.OnWndProc += delegate(LeagueSharp.WndEventArgs a) {
+                    if (a.Msg == 256 && a.WParam == switchButton) Timer.Get("jungler slack").later = !Timer.Get("jungler slack").later; //F1
+                    if (a.Msg == 516 && a.WParam == 2) Timer.Get("jungler slack").later = true; // RIGHT CLICK
+                };
             }
         }
     }
