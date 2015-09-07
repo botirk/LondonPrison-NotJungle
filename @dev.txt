@@ -1,0 +1,15 @@
+Jungler API will be available sooooon, right now its subject to change & evolving
+Here is example from NotLib.cs
+
+kill.spell.Q_Worth = (c, cs) => { return true; };
+kill.spell.W_Worth = (c,cs) => {return s.myHero.InRange(c) && cs.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
+
+these 2 lines will set up Jungler Slack for Warwick
+
+kill.spell.Q_Worth = (c, cs) => { return true; };
+kill.spell.E_Worth = new CycleEx("Warwick").kill.spell.W_Worth;
+move.channel.Worth = kill.channel.Worth = () => { return s.myHero.Health / s.myHero.MaxHealth < 1; };
+move.LogicEx = (cs) => { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
+
+these 4 lines will set up Jungler Slack for Master Yi
+
