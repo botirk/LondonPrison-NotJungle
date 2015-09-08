@@ -1,6 +1,8 @@
 Features:
 
 Automatic Farm jungle with AA
+Optional fast path
+Smite-steal + golem/wight early smiting
 Automatic Pots at 45% health
 Yi+WW also use skills
 
