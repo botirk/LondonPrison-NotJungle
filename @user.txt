@@ -9,3 +9,5 @@ Yi+WW also use skills
 LeagueSharp.Common GUI
 F1 > enable/disable
 Right Click > disable
+Target Creep > F1 > custom camp clear
+Saves level-up time history
