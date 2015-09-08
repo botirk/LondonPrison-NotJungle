@@ -59,12 +59,15 @@
   <ItemGroup>
     <Reference Include="LeagueSharp">
       <HintPath>C:\memory hacking\l#\System\LeagueSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="LeagueSharp.Common">
       <HintPath>C:\memory hacking\l#\System\LeagueSharp.Common.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="SharpDX">
       <HintPath>C:\memory hacking\l#\System\SharpDX.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>

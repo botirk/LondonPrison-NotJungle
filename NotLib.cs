@@ -3,7 +3,7 @@
 namespace NotLib.Ext {
     // static methods (several will be transformed into classes later)
     public static class s {
-        public static LeagueSharp.Obj_AI_Hero myHero = LeagueSharp.ObjectManager.Player;
+        public static Player myHero = LeagueSharp.ObjectManager.Player.Data<Player>();
         public static LeagueSharp.Obj_SpawnPoint allySpawn = LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_SpawnPoint>().FirstOrDefault(spawn => spawn.IsValid && spawn.Team == LeagueSharp.ObjectManager.Player.Team);
         public static LeagueSharp.Obj_SpawnPoint enemySpawn = LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_SpawnPoint>().FirstOrDefault(spawn => spawn.IsValid && spawn.Team != LeagueSharp.ObjectManager.Player.Team);
         // position related
@@ -26,81 +26,17 @@ namespace NotLib.Ext {
             var dist = allySpawn.Position.Distance(unit) - enemySpawn.Position.Distance(unit);
             if (dist > 1250) return enemySpawn.Team; else if (dist < -1250) return allySpawn.Team; else return LeagueSharp.GameObjectTeam.Neutral;
         }
-        // buff related
-        public static bool Buff(this LeagueSharp.Obj_AI_Base unit, string name) {
-            foreach (var buff in unit.Buffs) {
-                if (buff.IsValid && buff.IsActive && buff.Name == name) return true;
-            }
-            return false;
-        }
-        public static bool Buff(this LeagueSharp.Obj_AI_Base unit, System.Collections.Generic.List<string> list) {
-            foreach (var buff in list) { if (myHero.Buff(buff)) return true; }
-            return false;
-        }
-        // item+spell related
-        public static bool CanUse(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell) { return unit.Spellbook.GetSpell(spell).State == LeagueSharp.SpellState.Ready; } // optimize it
-        public static LeagueSharp.SpellSlot Item(this LeagueSharp.Obj_AI_Base unit, int id, bool usable = false) {
-            var item = unit.InventoryItems.FirstOrDefault(slot => slot.Id == (LeagueSharp.ItemId)id && (!usable || unit.CanUse(slot.SpellSlot)));
-            if (item != null) return item.SpellSlot; else return LeagueSharp.SpellSlot.Unknown;
-        }
-        public static LeagueSharp.SpellSlot Item(this LeagueSharp.Obj_AI_Base unit, System.Collections.Generic.List<int> list, bool usable = false) {
-            foreach (var id in list) {
-                var spell = unit.Item(id);
-                if (spell != LeagueSharp.SpellSlot.Unknown) return spell;
-            }
-            return LeagueSharp.SpellSlot.Unknown;
-        }
-        public static int SmiteDamage(this LeagueSharp.Obj_AI_Hero unit) {
-            var damage = 370 + unit.Level * 20;
-            if (unit.Level > 4) damage = damage + (unit.Level - 4) * 10;
-            if (unit.Level > 9) damage = damage + (unit.Level - 9) * 10;
-            if (unit.Level > 14) damage = damage + (unit.Level - 14) * 10;
-            return damage;
-        }
-        public static bool InRange(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.AttackableUnit target) { return unit.ServerPosition.Distance(target.Position) < unit.AttackRange + unit.BoundingRadius + target.BoundingRadius; }
-        public static bool InRange(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.AttackableUnit target, LeagueSharp.SpellSlot spell) { return unit.ServerPosition.Distance(target.Position) < unit.Spellbook.GetSpell(spell).SData.CastRange; }
-        // order related
-        public static void Attack(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.AttackableUnit target) { unit.IssueOrder(LeagueSharp.GameObjectOrder.AttackUnit, target); }
-        public static void MoveTo(this LeagueSharp.Obj_AI_Base unit, SharpDX.Vector3 pos, bool randomize = true) { unit.IssueOrder(LeagueSharp.GameObjectOrder.MoveTo, pos); }
-        public static bool Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell) { return (spell != LeagueSharp.SpellSlot.Unknown && unit.CanUse(spell) && unit.Spellbook.CastSpell(spell)); }
-        public static bool Cast(this LeagueSharp.Obj_AI_Base unit, LeagueSharp.SpellSlot spell, LeagueSharp.GameObject target) { return (spell != LeagueSharp.SpellSlot.Unknown && unit.CanUse(spell) && unit.Spellbook.CastSpell(spell, target)); }
-        public static void Level(this LeagueSharp.Obj_AI_Base unit, System.Collections.Generic.List<LeagueSharp.SpellSlot> list) {
-            int req_Q = 0, _Q = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.Q).Level;
-            int req_W = 0, _W = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.W).Level;
-            int req_E = 0, _E = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.W).Level;
-            int req_R = 0, _R = unit.Spellbook.GetSpell(LeagueSharp.SpellSlot.R).Level;
-            foreach (var spell in list) {
-                switch (spell) {
-                    case LeagueSharp.SpellSlot.Q:
-                        req_Q += 1;
-                        if (req_Q > _Q) unit.Spellbook.LevelSpell(spell);
-                        break;
-                    case LeagueSharp.SpellSlot.W:
-                        req_W += 1;
-                        if (req_W > _W) unit.Spellbook.LevelSpell(spell);
-                        break;
-                    case LeagueSharp.SpellSlot.E:
-                        req_E += 1;
-                        if (req_E > _E) unit.Spellbook.LevelSpell(spell);
-                        break;
-                    case LeagueSharp.SpellSlot.R:
-                        req_R += 1;
-                        if (req_R > _R) unit.Spellbook.LevelSpell(spell);
-                        break;
-                }
-            }
-        }
     }
-    // unit
-    public class Unit {
-        public LeagueSharp.GameObject unit;
+    // object
+    public class Object {
+        // members
+        public LeagueSharp.GameObject @ref;
         public string @class;
-        public Unit(LeagueSharp.GameObject a, string req = null) {
-            @class = Class(a);
-            if (req != null && req != @class) throw new System.Exception("NotLib." + req + "constructed with NotLib." + @class);
-            unit = a;
+        public Object(LeagueSharp.GameObject a) {
+            @ref = a;
+            @class = Class(a); 
         }
-        //
+        // methods
         public static string Class(LeagueSharp.GameObject unit) {
             var type = unit.Type;
             switch (type) {
@@ -136,135 +72,201 @@ namespace NotLib.Ext {
                 case LeagueSharp.GameObjectType.obj_SpellMissile:
                 case LeagueSharp.GameObjectType.obj_SpellCircleMissile:
                 case LeagueSharp.GameObjectType.obj_SpellLineMissile: return "spell";
+                case LeagueSharp.GameObjectType.obj_Turret:
+                case LeagueSharp.GameObjectType.obj_Levelsizer:
+                case LeagueSharp.GameObjectType.obj_NavPoint:
+                case LeagueSharp.GameObjectType.LevelPropSpawnerPoint:
+                case LeagueSharp.GameObjectType.LevelPropGameObject:
+                case LeagueSharp.GameObjectType.GrassObject:
+                case LeagueSharp.GameObjectType.obj_Lake:
+                case LeagueSharp.GameObjectType.obj_LampBulb:
+                case LeagueSharp.GameObjectType.DrawFX: return "useless";
             }
             return "error";
         }
     }
-    // creepSpawn
-    public class CreepSpawn : Unit {
+    // unit
+    public class Unit : Object {
         // members
-        new public LeagueSharp.NeutralMinionCamp unit;
+        new public LeagueSharp.Obj_AI_Base @ref;
+        public Unit(LeagueSharp.Obj_AI_Base a): base(a) {
+            @ref = a;
+        }
+        // methods
+        public bool InRange(Unit target) { return @ref.ServerPosition.Distance(target.@ref.Position) < @ref.AttackRange + @ref.BoundingRadius + target.@ref.BoundingRadius; }
+        public bool InRange(Unit target, LeagueSharp.SpellSlot spell) { return @ref.ServerPosition.Distance(target.@ref.Position) < @ref.Spellbook.GetSpell(spell).SData.CastRange; }
+        public bool Buff(string name) {
+            foreach (var buff in @ref.Buffs) {
+                if (buff.IsValid && buff.IsActive && buff.Name == name) return true;
+            }
+            return false;
+        }
+        public bool Buff(System.Collections.Generic.List<string> list) {
+            foreach (var buff in list) if (Buff(buff)) return true;
+            return false;
+        }
+        public bool CanUse(LeagueSharp.SpellSlot spell) { return @ref.Spellbook.GetSpell(spell).State == LeagueSharp.SpellState.Ready; } // optimize it
+        public LeagueSharp.SpellSlot Item(int id, bool usable = false) {
+            var item = @ref.InventoryItems.FirstOrDefault(slot => slot.Id == (LeagueSharp.ItemId)id && (!usable || CanUse(slot.SpellSlot)));
+            if (item != null) return item.SpellSlot; else return LeagueSharp.SpellSlot.Unknown;
+        }
+        public LeagueSharp.SpellSlot Item(System.Collections.Generic.List<int> list, bool usable = false) {
+            foreach (var id in list) {
+                var spell = Item(id);
+                if (spell != LeagueSharp.SpellSlot.Unknown) return spell;
+            }
+            return LeagueSharp.SpellSlot.Unknown;
+        }
+    }
+    // player
+    public class Player: Unit {
+        // members
+        new public LeagueSharp.Obj_AI_Hero @ref;
+        public static Player myHero = LeagueSharp.ObjectManager.Player.Data<Player>();
+        public Player(LeagueSharp.Obj_AI_Hero a): base(a) {
+            @ref = a;
+        }
+        // methods
+        public int SmiteDamage() {
+            var damage = 370 + @ref.Level * 20;
+            if (@ref.Level > 4) damage = damage + (@ref.Level - 4) * 10;
+            if (@ref.Level > 9) damage = damage + (@ref.Level - 9) * 10;
+            if (@ref.Level > 14) damage = damage + (@ref.Level - 14) * 10;
+            return damage;
+        }
+        public void Level(System.Collections.Generic.List<LeagueSharp.SpellSlot> list) {
+            int req_Q = 0, _Q = @ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.Q).Level;
+            int req_W = 0, _W = @ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.W).Level;
+            int req_E = 0, _E = @ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.W).Level;
+            int req_R = 0, _R = @ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.R).Level;
+            foreach (var spell in list) {
+                switch (spell) {
+                    case LeagueSharp.SpellSlot.Q:
+                        req_Q += 1;
+                        if (req_Q > _Q) @ref.Spellbook.LevelSpell(spell);
+                        break;
+                    case LeagueSharp.SpellSlot.W:
+                        req_W += 1;
+                        if (req_W > _W) @ref.Spellbook.LevelSpell(spell);
+                        break;
+                    case LeagueSharp.SpellSlot.E:
+                        req_E += 1;
+                        if (req_E > _E) @ref.Spellbook.LevelSpell(spell);
+                        break;
+                    case LeagueSharp.SpellSlot.R:
+                        req_R += 1;
+                        if (req_R > _R) @ref.Spellbook.LevelSpell(spell);
+                        break;
+                }
+            }
+        }
+        public void Attack(Unit target) { @ref.IssueOrder(LeagueSharp.GameObjectOrder.AttackUnit, target.@ref); }
+        public void MoveTo(Object target) { @ref.IssueOrder(LeagueSharp.GameObjectOrder.MoveTo, target.@ref.Position); }
+        public bool Cast(LeagueSharp.SpellSlot spell) { return (spell != LeagueSharp.SpellSlot.Unknown && CanUse(spell) && @ref.Spellbook.CastSpell(spell)); }
+        public bool Cast(LeagueSharp.SpellSlot spell, LeagueSharp.GameObject target) { return (spell != LeagueSharp.SpellSlot.Unknown && CanUse(spell) && @ref.Spellbook.CastSpell(spell, target)); }
+    }
+    // creepSpawn
+    public class CreepSpawn : Object {
+        // members
+        new public LeagueSharp.NeutralMinionCamp @ref;
         public int campNumber;
-        public string type;
         public float spawn, respawn, dead;
-        public CreepSpawn(LeagueSharp.GameObject a): base(a, "creepSpawn") {
-            unit = a as LeagueSharp.NeutralMinionCamp;
+        public CreepSpawn(LeagueSharp.NeutralMinionCamp a): base(a) {
+            @ref = a;
             campNumber = CampNumber();
-            type = Type();
             spawn = Spawn() + 30; //bug with timers
             respawn = Respawn();
             dead = spawn;
             a.GetHashCode();
         }
         // methods
-        public static LeagueSharp.NeutralMinionCamp One(string name) {
-            var side = LeagueSharp.GameObjectTeam.Unknown;
-            if (name[0] == 'e') {
-                name = name.Substring(1);
-                side = s.enemySpawn.Team;
-            } else if (name[0] == 'o') {
-                name = name.Substring(1);
-                side = s.allySpawn.Team;
-            }
-            return LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>().FirstOrDefault(cs => cs.IsValid && cs.Data<CreepSpawn>().type == name && (side == LeagueSharp.GameObjectTeam.Unknown || cs.Position.Side() == side));
-        }
         public int CampNumber() {
-            var result = System.Text.RegularExpressions.Regex.Match(unit.Name, @"\d+");
+            var result = System.Text.RegularExpressions.Regex.Match(@ref.Name, @"\d+");
             if (!result.Success) return 0;
             else {
                 int num = 0;
                 if (int.TryParse(result.Value, out num)) return num; else return 0;
             }
         }
-        public string Type() {
-            if (LeagueSharp.Game.MapId == LeagueSharp.GameMapId.SummonersRift) {
-                switch (campNumber) {
-                    case 6: return "dragon";
-                    case 12: return "nashor";
-                    case 1:
-                    case 7: return "blue";
-                    case 4:
-                    case 10: return "red";
-                    case 15:
-                    case 16: return "cancer";
-                    case 2:
-                    case 8: return "wolf";
-                    case 3:
-                    case 9: return "wraith";
-                    case 5:
-                    case 11: return "golem";
-                    case 13:
-                    case 14: return "wight";
-                }
-            }
-            return "default";
-        }
+        public bool Test(int id, LeagueSharp.GameMapId map = LeagueSharp.GameMapId.SummonersRift) { return LeagueSharp.Game.MapId == map && campNumber == id; }
+        public bool Test(int[] id, LeagueSharp.GameMapId map = LeagueSharp.GameMapId.SummonersRift) { return LeagueSharp.Game.MapId == map && id.Contains(campNumber); }
+        public bool Dragon() { return Test(6); }
+        public bool Nashor() { return Test(12); }
+        public bool Blue() { return Test(new[] { 1, 7 }); }
+        public bool Red() { return Test(new[] { 4, 10 }); }
+        public bool Cancer() { return Test(new[] { 15, 16 }); }
+        public bool Wolf() { return Test(new[] { 2, 8 }); }
+        public bool Wraith() { return Test(new[] { 3, 9 }); }
+        public bool Golem() { return Test(new[] { 5, 11 }); }
+        public bool Wight() { return Test(new[] { 13, 14 }); }
         public float Spawn() {
-            if (LeagueSharp.Game.MapId == LeagueSharp.GameMapId.SummonersRift) {
-                switch (type) {
-                    case "dragon": return 150;
-                    case "nashor": return 750;
-                    case "cancer": return 150;
-                }
-            }
-            return 120;
+            if (Dragon()) return 150;
+            else if (Nashor()) return 750;
+            else if (Cancer()) return 150;
+            else return 120;
         }
         public float Respawn() {
-            if (LeagueSharp.Game.MapId == LeagueSharp.GameMapId.SummonersRift) {
-                switch (type) {
-                    case "dragon": return 360;
-                    case "nashor": return 420;
-                    case "blue": return 300;
-                    case "red": return 300;
-                    case "cancer": return 180;
-                }
-            }
-            return 100;
+            if (Dragon()) return 360;
+            else if (Nashor()) return 420;
+            else if (Cancer()) return 180;
+            else if (Blue() || Red()) return 300;
+            else return 100;
         }
-        public System.Collections.Generic.IEnumerable<LeagueSharp.Obj_AI_Minion> Creeps(bool dead = false) { return LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_AI_Minion>().Where(creep => creep.IsValid && creep.IsVisible && creep.IsDead == dead && creep.CampNumber == campNumber); }
-        public float Health() { return Creeps().Sum(creep => creep.Health); }
-        public LeagueSharp.Obj_AI_Minion BigCreep() {
-            LeagueSharp.Obj_AI_Minion max = null;
-            foreach (var creep in Creeps()) { if (max == null || creep.MaxHealth > max.MaxHealth) max = creep; }
+        public System.Collections.Generic.IEnumerable<Creep> Creeps(bool dead = false) { return Interface.data.Values.OfType<Creep>().Where(c => c.@ref.IsVisible && c.@ref.IsDead == dead && c.@ref.CampNumber == campNumber); }
+        public float Health() { return Creeps().Sum(creep => creep.@ref.Health); }
+        public Creep BigCreep() {
+            Creep max = null;
+            foreach (var c in Creeps()) { if (max == null || c.@ref.MaxHealth > max.@ref.MaxHealth) max = c; }
             return max;
         }
         public bool Started() {
-            foreach (LeagueSharp.Obj_AI_Minion creep in Creeps()) { if (creep.Health < creep.MaxHealth) return true; }
+            foreach (var c in Creeps()) { if (c.@ref.Health < c.@ref.MaxHealth) return true; }
             return false;
         }
-        public void Set(bool state) { if (state) dead = 0; else dead = LeagueSharp.Game.ClockTime + unit.Data<CreepSpawn>().respawn; }
+        public void Set(bool state) { if (state) dead = 0; else dead = LeagueSharp.Game.ClockTime + respawn; }
         public float Get() { return System.Math.Max(0, dead - LeagueSharp.Game.ClockTime); }
         public void Refresh(bool force = false) {
             if (Creeps().Any()) Set(true);
             else if (Get() == 0 && force) Set(false);
-            else if (Get() == 0 && !s.myHero.IsDead && unit.Data<CreepSpawn>().type != "cancer" && s.myHero.ServerPosition.CanSee(unit.Position))
-                Timer.Once((h) => { if (s.myHero.ServerPosition.CanSee(unit.Position)) Refresh(true); }).Cooldown(LeagueSharp.Game.Ping).Start();
+            else if (Get() == 0 && !s.myHero.@ref.IsDead && !Cancer() && s.myHero.@ref.ServerPosition.CanSee(@ref.Position))
+                Timer.Once((h) => { if (s.myHero.@ref.ServerPosition.CanSee(@ref.Position)) Refresh(true); }).Cooldown(LeagueSharp.Game.Ping/1000+0.05f).Start();
             else if (Creeps(true).Any()) Set(false);
         }
     }
     // creep
     public class Creep : Unit {
         // members
-        new public static LeagueSharp.Obj_AI_Minion unit;
+        new public LeagueSharp.Obj_AI_Minion @ref;
         public int campNumber;
-        public Creep(LeagueSharp.Obj_AI_Minion a): base(a, "creep") {
-            unit = a;
+        public Creep(LeagueSharp.Obj_AI_Minion a): base(a) {
+            @ref = a;
             campNumber = a.CampNumber;
         }
         // methods
-        public LeagueSharp.NeutralMinionCamp CreepSpawn() { return LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>().FirstOrDefault(creepSpawn => creepSpawn.IsValid && creepSpawn.Data<CreepSpawn>().campNumber == campNumber); }
+        public CreepSpawn CreepSpawn() { return Interface.data.Values.OfType<CreepSpawn>().FirstOrDefault(cs => cs.campNumber == campNumber); }
     }
     // extension interface
     public static class Interface {
-        public static System.Collections.Generic.Dictionary<int, Unit> data = new System.Collections.Generic.Dictionary<int, Unit>();
-        public static T Data<T>(this LeagueSharp.GameObject unit) where T : Unit {
-            if (!data.ContainsKey(unit.Index)) {
-                if (typeof(T) == typeof(Unit)) data[unit.Index] = new Unit(unit);
-                else if (typeof(T) == typeof(Creep)) data[unit.Index] = new Creep(unit as LeagueSharp.Obj_AI_Minion);
-                else if (typeof(T) == typeof(CreepSpawn)) data[unit.Index] = new CreepSpawn(unit as LeagueSharp.NeutralMinionCamp);
-            }
-            return (T)data[unit.Index];
+        public static System.Collections.Generic.Dictionary<int, Object> data = new System.Collections.Generic.Dictionary<int, Object>();
+        public static void Add(Object unit) { data.Add(unit.@ref.Index, unit); }
+        public static void Add(LeagueSharp.GameObject unit) {
+            var @class = Unit.Class(unit);
+            if (@class == "useless") return;
+            else if (@class == "creep") Add(new Creep(unit as LeagueSharp.Obj_AI_Minion));
+            else if (@class == "creepSpawn") Add(new CreepSpawn(unit as LeagueSharp.NeutralMinionCamp));
+            else if (@class == "player") Add(new Player(unit as LeagueSharp.Obj_AI_Hero));
+            else if (unit is LeagueSharp.Obj_AI_Base) Add(new Unit(unit as LeagueSharp.Obj_AI_Base));
+            else data.Add(unit.Index, new Object(unit));
         }
+        public static void Remove(Unit unit) { Remove(unit.@ref); }
+        public static void Remove(LeagueSharp.GameObject unit) { data.Remove(unit.Index); }
+        static Interface() {
+            LeagueSharp.GameObject.OnCreate += (obj, a) => Add(obj);
+            LeagueSharp.GameObject.OnDelete += (obj, a) => Remove(obj);
+            foreach (var obj in LeagueSharp.ObjectManager.Get<LeagueSharp.GameObject>()) Add(obj);
+        }
+        // extension
+        public static T Data<T>(this LeagueSharp.GameObject unit) where T : Object {return (T)data[unit.Index];}
     }
     // timer
     public static class Timer {
@@ -311,14 +313,14 @@ namespace NotLib.Abstract {
         override public void Reset() {
             id = new System.Collections.Generic.List<int> { 2041, 2003, 2010, 2009 };
             buff = new System.Collections.Generic.List<string> { "ItemCrystalFlask", "RegenerationPotion", "ItemMiniRegenPotion" };
-            Need = delegate { return s.myHero.Health / s.myHero.MaxHealth < 0.45; };
+            Need = delegate { return s.myHero.@ref.Health / s.myHero.@ref.MaxHealth < 0.45; };
             Logic = delegate { if (Need()) s.myHero.Cast(s.myHero.Item(id)); };
         }
     }
     // spell attack
     public class SpellAttack: Parent {
         public System.Func<LeagueSharp.AttackableUnit, bool> T(LeagueSharp.SpellSlot spell) {
-            var gs = s.myHero.Spellbook.GetSpell(spell);
+            var gs = s.myHero.@ref.Spellbook.GetSpell(spell);
             switch (gs.SData.TargettingType) {
                 case LeagueSharp.SpellDataTargetType.Unit:
                     return delegate(LeagueSharp.AttackableUnit target) { return s.myHero.Cast(spell, target); };
@@ -341,7 +343,7 @@ namespace NotLib.Abstract {
     // spell self
     public class SpellSelf : Parent {
         public System.Func<bool> T(LeagueSharp.SpellSlot spell) {
-            var gs = s.myHero.Spellbook.GetSpell(spell);
+            var gs = s.myHero.@ref.Spellbook.GetSpell(spell);
             switch (gs.SData.TargettingType) {
                 case LeagueSharp.SpellDataTargetType.SelfAoe:
                 case LeagueSharp.SpellDataTargetType.Self:
@@ -371,14 +373,14 @@ namespace NotLib.Abstract {
         }
         // spell
         public class Spell : SpellAttack {
-            public System.Func<LeagueSharp.Obj_AI_Minion, LeagueSharp.NeutralMinionCamp, bool> Q_Worth, W_Worth, E_Worth, R_Worth;
-            new public System.Func<LeagueSharp.Obj_AI_Minion, LeagueSharp.NeutralMinionCamp, bool> Logic;
+            public System.Func<Creep,CreepSpawn, bool> Q_Worth, W_Worth, E_Worth, R_Worth;
+            new public System.Func<Creep,CreepSpawn, bool> Logic;
             override public void Reset() {
-                Logic = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    if (Q_Worth(creep,creepSpawn) && Q(creep)) return true;
-                    else if (W_Worth(creep, creepSpawn) && W(creep)) return true;
-                    else if (E_Worth(creep, creepSpawn) && E(creep)) return true;
-                    else if (R_Worth(creep, creepSpawn) && R(creep)) return true;
+                Logic = (c,cs) => {
+                    if (Q_Worth(c, cs) && Q(c.@ref)) return true;
+                    else if (W_Worth(c, cs) && W(c.@ref)) return true;
+                    else if (E_Worth(c, cs) && E(c.@ref)) return true;
+                    else if (R_Worth(c, cs) && R(c.@ref)) return true;
                     return false;
                 };
                 Q = T(LeagueSharp.SpellSlot.Q);
@@ -393,41 +395,31 @@ namespace NotLib.Abstract {
             public System.Func<bool> Worth, State, Logic;
             override public void Reset() {
                 Worth = delegate() { return true; };
-                State = delegate() { return s.myHero.Spellbook.IsCastingSpell || s.myHero.Spellbook.IsChanneling; };
+                State = delegate() { return s.myHero.@ref.Spellbook.IsCastingSpell || s.myHero.@ref.Spellbook.IsChanneling; };
                 Logic = delegate() { return Worth() && State(); };
             }
         }
         // smite
         public class Smite : Parent {
-            public System.Func<LeagueSharp.Obj_AI_Minion, LeagueSharp.NeutralMinionCamp, bool> WorthStart,Worth, WorthEx;
-            public System.Func<LeagueSharp.Obj_AI_Minion, bool> Logic;
+            public System.Func<Creep,CreepSpawn, bool> WorthStart,Worth, WorthEx,Logic;
             public LeagueSharp.SpellSlot spell;
             public static LeagueSharp.SpellSlot Find() {
-                if (s.myHero.Spellbook.GetSpell(LeagueSharp.SpellSlot.Summoner1).Name.ToLower().Contains("smite")) return LeagueSharp.SpellSlot.Summoner1;
-                else if (s.myHero.Spellbook.GetSpell(LeagueSharp.SpellSlot.Summoner2).Name.ToLower().Contains("smite")) return LeagueSharp.SpellSlot.Summoner2;
+                if (s.myHero.@ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.Summoner1).Name.ToLower().Contains("smite")) return LeagueSharp.SpellSlot.Summoner1;
+                else if (s.myHero.@ref.Spellbook.GetSpell(LeagueSharp.SpellSlot.Summoner2).Name.ToLower().Contains("smite")) return LeagueSharp.SpellSlot.Summoner2;
                 else return LeagueSharp.SpellSlot.Unknown;
             }
             override public void Reset() {
-                WorthStart = delegate(LeagueSharp.Obj_AI_Minion creep, LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    return creepSpawn.Data<CreepSpawn>().Started() && creep.MaxHealth > s.myHero.SmiteDamage() * 2; // not started or too small
+                WorthStart = (c,cs) => {
+                    return cs.Started() && c.@ref.MaxHealth > s.myHero.SmiteDamage() * 2; // not started or too small
                 };
-                Worth = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    if (creep.Health > s.myHero.SmiteDamage()) return false; // cant smitesteal
-                    switch (creepSpawn.Data<CreepSpawn>().type) {
-                        case "dragon":
-                        case "nashor":
-                        case "blue":
-                        case "red":
-                            return true;
-                        default:
-                            return false;
-                    }
+                Worth = (c, cs) => {
+                    if (c.@ref.Health > s.myHero.SmiteDamage()) return false; // cant smitesteal
+                    else return (cs.Dragon() || cs.Nashor() || cs.Blue() || cs.Red());
                 };
-                WorthEx = delegate { return false; };
-                Logic = delegate(LeagueSharp.Obj_AI_Minion creep) {
-                    if (creep.CampNumber == 0 || s.myHero.ServerPosition.Distance(creep.ServerPosition) > 850) return false;
-                    var creepSpawn = creep.Data<Creep>().CreepSpawn();
-                    return creepSpawn != null && WorthStart(creep,creepSpawn) && (WorthEx(creep,creepSpawn) || Worth(creep,creepSpawn)) && s.myHero.Cast(spell, creep); 
+                WorthEx = (c, cs) => { return false; };
+                Logic = (c,cs) => {
+                    if (c.@ref.CampNumber == 0 || s.myHero.@ref.ServerPosition.Distance(c.@ref.ServerPosition) > 850) return false;
+                    else return WorthStart(c, cs) && (WorthEx(c, cs) || Worth(c, cs)) && s.myHero.Cast(spell, c.@ref); 
                 };
                 spell = Find();
             }
@@ -438,19 +430,14 @@ namespace NotLib.Abstract {
             public Timer.Handle timer;
             public override void Reset() {
                 smite = new Smite();
-                smite.WorthEx = delegate(LeagueSharp.Obj_AI_Minion creep, LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    switch (creepSpawn.Data<CreepSpawn>().type) {
-                        case "wight":
-                        case "golem":
-                            return !LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_AI_Hero>().Any(player => player.IsValid && !player.IsMe && !player.IsDead && player.ServerPosition.Distance(s.myHero.ServerPosition) < 1500);
-                        default:
-                            return false;
-                    }
+                smite.WorthEx = (c,cs) => {
+                    return (cs.Wight() || cs.Golem()) &&
+                        !LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_AI_Hero>().Any(player => player.IsValid && !player.IsMe && !player.IsDead && player.ServerPosition.Distance(s.myHero.@ref.ServerPosition) < 1500);
                 };
                 if (timer != null) timer.Disable();
                 timer = Timer.Add(delegate {
-                    if (!s.myHero.IsDead)
-                        foreach (var creep in LeagueSharp.ObjectManager.Get<LeagueSharp.Obj_AI_Minion>()) { if (creep.IsValid) smite.Logic(creep); };
+                    if (!s.myHero.@ref.IsDead)
+                        foreach (var c in Interface.data.Values.OfType<Creep>()) { smite.Logic(c,c.CreepSpawn()); };
                 }).Start();
             }
         }
@@ -463,38 +450,37 @@ namespace NotLib.Abstract {
                 instance = this;
                 if (timer != null) timer.Disable();
                 timer = Timer.Add(delegate {
-                    if (!s.myHero.IsDead)
-                        foreach (var creepSpawn in LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>()) { if (creepSpawn.IsValid) creepSpawn.Data<CreepSpawn>().Refresh(); }
+                    if (!s.myHero.@ref.IsDead)
+                        foreach (var cs in Interface.data.Values.OfType<CreepSpawn>()) cs.Refresh();
                 }).Start();
             }
         }
         // navigator
         public class Nav : Parent {
             public System.Func<bool> Fast;
-            public System.Func<LeagueSharp.NeutralMinionCamp> CreepSpawn,CreepSpawnEx;
+            public System.Func<System.Collections.Generic.IEnumerable<CreepSpawn>> Candidates;
+            public System.Func<CreepSpawn> CreepSpawn,CreepSpawnEx;
             override public void Reset() {
                 Fast = delegate { return false; };
+                Candidates = () => Interface.data.Values.OfType<CreepSpawn>().Where(ics => ics.@ref.Position.Side() == s.myHero.@ref.Team);
                 CreepSpawn = delegate {
+                    CreepSpawn result = CreepSpawnEx(); if (result != null) return result;
                     var fast = Fast();
-                    LeagueSharp.NeutralMinionCamp result = CreepSpawnEx();
-                    if (result != null) return result;
+                    var candidates = Candidates();
                     var resultScore = double.MaxValue;
-                    foreach (var creepSpawn in LeagueSharp.ObjectManager.Get<LeagueSharp.NeutralMinionCamp>().Where(creepSpawn => creepSpawn.IsValid && creepSpawn.Position.Side() == s.myHero.Team)) {
+                    foreach (var cs in candidates) {
                         // score
-                        var type = creepSpawn.Data<CreepSpawn>().type;
                         var score = 0d;
-                        var get = creepSpawn.Data<CreepSpawn>().Get() * s.myHero.MoveSpeed;
-                        var dist = s.myHero.ServerPosition.Distance(creepSpawn.Position);
-                        if (creepSpawn.Data<CreepSpawn>().dead == creepSpawn.Data<CreepSpawn>().spawn || dist > get) score = dist; else score = dist + (get - dist) * 1.4;
-                        if (creepSpawn.Data<CreepSpawn>().Started()) { if (creepSpawn.Data<CreepSpawn>().respawn > 200) score -= 3300; else score -= 2000; } 
-                        else if (LeagueSharp.Game.MapId == LeagueSharp.GameMapId.SummonersRift) {
-                            if (s.myHero.Level == 1) { if ((!fast && type == "golem") || (fast && type == "wight")) score = score - 3300; } 
-                            else if (s.myHero.Level >= 3 && fast) {
-                                if (type == "wolf" && (Ext.CreepSpawn.One("oblue").Data<CreepSpawn>().Get() < 3200 / s.myHero.MoveSpeed || Ext.CreepSpawn.One("owight").Data<CreepSpawn>().Get() < 3200 / s.myHero.MoveSpeed)) score += 3300;
-                                else if (type == "wraith" && (Ext.CreepSpawn.One("ored").Data<CreepSpawn>().Get() < 3200 / s.myHero.MoveSpeed || Ext.CreepSpawn.One("ogolem").Data<CreepSpawn>().Get() < 3200 / s.myHero.MoveSpeed)) score += 3300;
+                        var get = cs.Get() * s.myHero.@ref.MoveSpeed;
+                        var dist = s.myHero.@ref.ServerPosition.Distance(cs.@ref.Position);
+                        if (cs.dead == cs.spawn || dist > get) score = dist; else score = dist + (get - dist) * 1.4;
+                        if (cs.Started()) { if (cs.respawn > 200) score -= 3300; else score -= 2000; } else if (LeagueSharp.Game.MapId == LeagueSharp.GameMapId.SummonersRift) {
+                            if (s.myHero.@ref.Level == 1) { if ((!fast && cs.Golem()) || (fast && cs.Wight())) score = score - 3300; } else if (s.myHero.@ref.Level >= 3 && fast) {
+                                if (cs.Wolf() && (candidates.First((ics) => ics.Blue()).Get() < 3200 / s.myHero.@ref.MoveSpeed || candidates.First((ics) => ics.Wight()).Get() < 3200 / s.myHero.@ref.MoveSpeed)) score += 3300;
+                                else if (cs.Wraith() && (candidates.First((ics) => ics.Red()).Get() < 3200 / s.myHero.@ref.MoveSpeed || candidates.First((ics) => ics.Golem()).Get() < 3200 / s.myHero.@ref.MoveSpeed)) score += 3300;
                             }
                         }
-                        if (score < resultScore) { result = creepSpawn; resultScore = score; }
+                        if (score < resultScore) { result = cs; resultScore = score; }
                     }
                     return result;
                 };
@@ -504,24 +490,23 @@ namespace NotLib.Abstract {
         // target
         public class Target : Parent {
             public RedBuff redBuff;
-            public System.Func<LeagueSharp.NeutralMinionCamp, bool> Cleave;
-            public System.Func<LeagueSharp.NeutralMinionCamp, LeagueSharp.Obj_AI_Minion> Creep, CreepEx;
+            public System.Func<CreepSpawn, bool> Cleave;
+            public System.Func<CreepSpawn, Creep> Creep, CreepEx;
             override public void Reset() {
                 redBuff = new RedBuff();
-                Cleave = delegate { return false; };
-                CreepEx = delegate { return null; };
-                Creep = delegate(LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    var cleave = Cleave(creepSpawn);
-                    LeagueSharp.Obj_AI_Minion target = CreepEx(creepSpawn);
-                    if (target != null) return target;
+                Cleave = (c) => false;
+                CreepEx = (cs) => null;
+                Creep = (cs) => {
+                    var target = CreepEx(cs); if (target != null) return target;
+                    var cleave = Cleave(cs);
                     var red = s.myHero.Buff(redBuff.own);
-                    foreach (var creep in creepSpawn.Data<CreepSpawn>().Creeps()) {
-                        if (target == null) target = creep;
-                        else if (red && (target.Buff(redBuff.apply) || creep.Buff(redBuff.apply))) {
-                            if (target.Buff(redBuff.apply) && !creep.Buff(redBuff.apply)) target = creep;
-                        } else if (cleave && creep.MaxHealth > target.MaxHealth) target = creep;
-                        else if (!cleave && creep.MaxHealth < target.MaxHealth) target = creep;
-                        else if (creep.MaxHealth == target.MaxHealth && creep.NetworkId > target.NetworkId) target = creep;
+                    foreach (var c in cs.Creeps()) {
+                        if (target == null) target = c;
+                        else if (red && (target.Buff(redBuff.apply) || c.Buff(redBuff.apply))) {
+                            if (target.Buff(redBuff.apply) && !c.Buff(redBuff.apply)) target = c;
+                        } else if (cleave && c.@ref.MaxHealth > target.@ref.MaxHealth) target = c;
+                        else if (!cleave && c.@ref.MaxHealth < target.@ref.MaxHealth) target = c;
+                        else if (c.@ref.MaxHealth == target.@ref.MaxHealth && c.@ref.NetworkId > target.@ref.NetworkId) target = c;
                     }
                     return target;
                 };
@@ -533,30 +518,30 @@ namespace NotLib.Abstract {
             public HealthPot pot;
             public Channel channel;
             public Spell spell;
-            public System.Action<LeagueSharp.Obj_AI_Minion,LeagueSharp.NeutralMinionCamp> Logic;
+            public System.Action<Creep,CreepSpawn> Logic;
             override public void Reset() {
                 pot = new HealthPot();
                 channel = new Channel();
                 spell = new Spell();
-                Logic = delegate(LeagueSharp.Obj_AI_Minion creep,LeagueSharp.NeutralMinionCamp creepSpawn) {
+                Logic = (c,cs) => {
                     pot.Logic();
                     if (channel.Logic()) return;
-                    spell.Logic(creep,creepSpawn);
-                    s.myHero.Attack(creep);
+                    spell.Logic(c,cs);
+                    s.myHero.Attack(c);
                 };
             }
         }
         // move
         public class Move : Parent {
             public Channel channel;
-            public System.Func<LeagueSharp.NeutralMinionCamp, bool> LogicEx,Logic;
+            public System.Func<CreepSpawn, bool> LogicEx,Logic;
             override public void Reset() {
                 channel = new Channel();
-                LogicEx = delegate(LeagueSharp.NeutralMinionCamp creepSpawn) { return false; };
-                Logic = delegate(LeagueSharp.NeutralMinionCamp creepSpawn) {
-                    if (channel.Logic() || LogicEx(creepSpawn)) return true;
-                    else if (s.myHero.ServerPosition.Distance(creepSpawn.Position) < 50) return false;
-                    s.myHero.MoveTo(creepSpawn.Position);
+                LogicEx = (cs) => false;
+                Logic = (cs) => {
+                    if (channel.Logic() || LogicEx(cs)) return true;
+                    else if (s.myHero.@ref.ServerPosition.Distance(cs.@ref.Position) < 50) return false;
+                    s.myHero.MoveTo(cs);
                     return true;
                 };
             }
@@ -579,7 +564,7 @@ namespace NotLib.Abstract {
                 smite = new SmiteActive();
                 Logic = delegate {
                     var creepSpawn = nav.CreepSpawn();
-                    if (LeagueSharp.Hud.SelectedUnit != null && LeagueSharp.Hud.SelectedUnit.Data<Unit>().@class == "creep") creepSpawn = LeagueSharp.Hud.SelectedUnit.Data<Creep>().CreepSpawn();
+                    if (LeagueSharp.Hud.SelectedUnit != null && LeagueSharp.Hud.SelectedUnit.Data<Object>().@class == "creep") creepSpawn = LeagueSharp.Hud.SelectedUnit.Data<Creep>().CreepSpawn();
                     if (creepSpawn == null) return false;
                     var creep = target.Creep(creepSpawn);
                     if (creep != null) kill.Logic(creep, creepSpawn);
@@ -595,13 +580,13 @@ namespace NotLib.Abstract {
                 switch (charName) {
                     case "Warwick":
                         kill.spell.Q_Worth = (c, cs) => { return true; };
-                        kill.spell.W_Worth = (c,cs) => {return s.myHero.InRange(c) && cs.Data<CreepSpawn>().Health() > s.myHero.SmiteDamage();};
+                        kill.spell.W_Worth = (c, cs) => { return s.myHero.InRange(c) && cs.Health() > s.myHero.SmiteDamage(); };
                         break;
                     case "MasterYi":
                         kill.spell.Q_Worth = (c, cs) => { return true; };
                         kill.spell.E_Worth = new CycleEx("Warwick").kill.spell.W_Worth;
-                        move.channel.Worth = kill.channel.Worth = () => { return s.myHero.Health / s.myHero.MaxHealth < 1; };
-                        move.LogicEx = (cs) => { return s.myHero.Health / s.myHero.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
+                        move.channel.Worth = kill.channel.Worth = () => { return s.myHero.@ref.Health / s.myHero.@ref.MaxHealth < 1; };
+                        move.LogicEx = (cs) => { return s.myHero.@ref.Health / s.myHero.@ref.MaxHealth < 0.45 && s.myHero.Cast(LeagueSharp.SpellSlot.W); };
                         break;
                 }
             }
@@ -628,15 +613,33 @@ namespace NotLib.Abstract {
                     }
                 };
                 // smite button
-                var smiteTick = new LeagueSharp.Common.MenuItem("smite", "smite").SetValue(true);
+                var smiteTick = new LeagueSharp.Common.MenuItem("smite", "smite",true).SetValue(true);
                 smiteTick.ValueChanged += (h, a) => smite.timer.later = !a.GetNewValue<bool>();
-                smiteTick.DontSave();
                 menu.AddItem(smiteTick);
                 // fast button
-                var fastTick = new LeagueSharp.Common.MenuItem("fast", "fast").SetValue(true);
+                var fastTick = new LeagueSharp.Common.MenuItem("fast", "fast",true).SetValue(true);
                 nav.Fast = () => fastTick.GetValue<bool>();
-                fastTick.DontSave();
                 menu.AddItem(fastTick);
+                // leveling
+                var recordMenu = new LeagueSharp.Common.Menu("records", "records");
+                menu.AddSubMenu(recordMenu);
+                LeagueSharp.Obj_AI_Hero.OnLevelUp += (unit, a) => { if (unit.IsMe) {
+                    var me = unit as LeagueSharp.Obj_AI_Hero;
+                    if (me.Level == 3 || me.Level == 6 || me.Level == 9 || me.Level == 11 || me.Level == 16) {
+                        var record = new LeagueSharp.Common.MenuItem(me.Level.ToString(), "lvl " + me.Level + " : " + System.TimeSpan.FromSeconds(LeagueSharp.Game.ClockTime).ToString(@"mm\:ss"));
+                        record.DontSave();
+                        recordMenu.AddItem(record);
+                    }
+                }};
+                // leveling sated
+                LeagueSharp.Obj_AI_Hero.OnBuffAdd += (unit,a) => {if (unit.IsMe){
+                    #warning l# bug
+                    //System.Console.WriteLine(a.Buff.Name);
+                }};
+                // leveling init
+                var startRecord = new LeagueSharp.Common.MenuItem("start", "start : " + System.TimeSpan.FromSeconds(LeagueSharp.Game.ClockTime).ToString(@"mm\:ss"));
+                startRecord.DontSave();
+                recordMenu.AddItem(startRecord);
                 // fin
                 menu.AddToMainMenu();
             }
@@ -646,7 +649,7 @@ namespace NotLib.Abstract {
                     if (a.Msg == 516 && a.WParam == 2) timer.later = true; // RIGHT CLICK
                 };
             }
-            public Switch():base(s.myHero.ChampionName) {
+            public Switch():base(s.myHero.@ref.ChampionName) {
                 switchButton = 112; // F1
                 timer = Timer.Add(delegate { Logic(); }).Cooldown(0.1f);
                 GuiFull();
